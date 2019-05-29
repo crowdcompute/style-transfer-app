@@ -1,0 +1,5 @@
+*.py[co]
+
+# Folders created by the app
+images
+result
