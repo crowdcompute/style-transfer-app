@@ -32,8 +32,10 @@ Call `localhost:3000/style_transfer` to upload images.
 
 Parameters:
 
-**images** : The images you want edit
+**images** : The images you want to edit
+
 **styles** : The styles you want to edit them with
 
 Comma separate the styles you want to use.
+
 Styles supported: la_muse,rain_princess,scream,udnie,wave,wreck
