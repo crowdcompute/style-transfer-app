@@ -28,11 +28,12 @@ docker run -p 3000:3000 style-transfer-app
 
 ## Web app
 
-Feed the app with images using a POST HTTP request.
+Call `localhost:3000/style_transfer` to upload images.
 
-Call `localhost:3000/style_transfer` to upload images and select styles using:
+Parameters:
 
-Content-Disposition: form-data; **name="images"**
-Content-Type: image/jpeg
+**images** : The images you want edit
+**styles** : The styles you want to edit them with
 
-Content-Disposition: form-data; **name="styles"**
+Comma separate the styles you want to use.
+Styles supported: la_muse,rain_princess,scream,udnie,wave,wreck
