@@ -16,6 +16,7 @@
 
 import os
 import imagehash
+import hashlib
 import zipfile
 import numpy as np
 from PIL import Image
@@ -35,6 +36,7 @@ if not isdir(RESULTS_DIR):
     os.mkdir(RESULTS_DIR)
 MAX_WIDTH = 1500
 MAX_HEIGHT = 1500
+BUF_SIZE = 65536
 
 api = Flask(__name__)
 
@@ -74,38 +76,59 @@ def upload():
                 # Save the uploaded image locally & get its hash
                 in_img_path = join(UPLOADS_PATH, image_bytes.filename)
                 image.save(in_img_path)
-                hashed_img_name = get_hashed_filename(image, get_ext(image_bytes.filename), style)
+                # hash image
+                # hash = imagehash.average_hash(image)
+                # hashed_img_name = style + str(hash) + get_ext(image_bytes.filename)
+                hashed_img_name = get_hashed_filename(in_img_path, get_ext(image_bytes.filename), style)
 
                 # Processing
                 style_transfer(style, in_img_path, hashed_img_name)
                 image_names.append(hashed_img_name)
                 json_urls[style+'_'+image_bytes.filename] = get_img_url(hashed_img_name)
 
+    hashed_zip_name = zip_images(image_names)
+    json_urls[hashed_zip_name] = get_img_url(hashed_zip_name)
     return jsonify(json_urls)
-
 
 def get_avail_styles():
     return [f.split('.')[0] for f in os.listdir(MODELS_PATH) if isfile(join(MODELS_PATH, f))]
 
-
 def get_img_url(img_name):
     return '{0}download/{1}'.format(request.url_root, img_name)
 
-
+# Returns extension with the dot (.)
 def get_ext(filename):
     return splitext(filename)[1][0:].strip().lower()
-
 
 def style_exists(style):
     style_filepath = join(MODELS_PATH, style + '.ckpt')
     return exists(style_filepath)
 
+def get_hashed_filename(file, ext, name_extra=''):
+    md5 = hashlib.md5()
+    with open(file, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            md5.update(data)
 
-def get_hashed_filename(file, ext, extra):
-    hash = imagehash.average_hash(file)
-    hashed_filename = str(hash) + '_' + extra + ext
-    return hashed_filename
+    hash = md5.hexdigest()
+    return name_extra + '_' + str(hash) + ext
 
+def zip_images(image_names):
+    zip_full_path = join(RESULTS_DIR, 'zip_name.zip')
+    zipf = zipfile.ZipFile(zip_full_path,'w', zipfile.ZIP_DEFLATED)
+
+    for img_name in image_names:
+        filepath = join(RESULTS_DIR, img_name)
+        zipf.write(filepath)
+
+    zipf.close()
+    hashed_zip_name = get_hashed_filename(zip_full_path, '.zip', 'results')
+    zip_hashed_full_path = join(RESULTS_DIR, hashed_zip_name)
+    os.rename(zip_full_path, zip_hashed_full_path)
+    return hashed_zip_name
 
 def file_check(img):
     filename = img.filename
@@ -118,7 +141,6 @@ def file_check(img):
         return True
     else:
         return False
-
 
 # Style transfer
 def style_transfer(style, in_img_path, hashed_img_name):
