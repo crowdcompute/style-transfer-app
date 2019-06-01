@@ -77,8 +77,6 @@ def upload():
                 in_img_path = join(UPLOADS_PATH, image_bytes.filename)
                 image.save(in_img_path)
                 # hash image
-                # hash = imagehash.average_hash(image)
-                # hashed_img_name = style + str(hash) + get_ext(image_bytes.filename)
                 hashed_img_name = get_hashed_filename(in_img_path, get_ext(image_bytes.filename), style)
 
                 # Processing
