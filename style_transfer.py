@@ -25,6 +25,7 @@ from flask import Flask, abort, request, jsonify, send_from_directory, send_file
 
 APP_ROOT = "/style-transfer-app"
 ZIP_PATH = join(APP_ROOT, "results.zip")
+
 MODELS_PATH = join(APP_ROOT, "checkpoint")
 UPLOADS_PATH = join(APP_ROOT, "images")
 if not isdir(UPLOADS_PATH):
@@ -37,10 +38,17 @@ MAX_HEIGHT = 1500
 
 api = Flask(__name__)
 
-# API call given the images needed, outputs the result image
-# Rerurns a link to image result
+# API call to download images
+@api.route('/download/<path:filename>')
+def download_file(filename):
+    """Download a file."""
+    return send_from_directory(RESULTS_DIR, filename, as_attachment=True)
+
+# API call to run style transfer 
+# Rerurns a links to image results
 @api.route('/style_transfer', methods=['GET', 'POST'])
 def upload():
+    json_urls = {}
     image_names = []
     if request.method == 'POST':
         styles = request.form.get('styles')
@@ -66,19 +74,26 @@ def upload():
                 # Save the uploaded image locally & get its hash
                 in_img_path = join(UPLOADS_PATH, image_bytes.filename)
                 image.save(in_img_path)
-                hashed_img_name = hash_filename(image, image_bytes.filename, style)
+                hashed_img_name = get_hashed_filename(image, get_ext(image_bytes.filename), style)
 
                 # Processing
                 style_transfer(style, in_img_path, hashed_img_name)
                 image_names.append(hashed_img_name)
+                json_urls[style+'_'+image_bytes.filename] = get_img_url(hashed_img_name)
 
-    zip_images(image_names)
-    print(ZIP_PATH)
-    return send_file(ZIP_PATH, mimetype='application/x-rar-compressed')
+    return jsonify(json_urls)
 
 
 def get_avail_styles():
     return [f.split('.')[0] for f in os.listdir(MODELS_PATH) if isfile(join(MODELS_PATH, f))]
+
+
+def get_img_url(img_name):
+    return '{0}download/{1}'.format(request.url_root, img_name)
+
+
+def get_ext(filename):
+    return splitext(filename)[1][0:].strip().lower()
 
 
 def style_exists(style):
@@ -86,10 +101,9 @@ def style_exists(style):
     return exists(style_filepath)
 
 
-def hash_filename(img, filename, style):
-    hash = imagehash.average_hash(img)
-    ext = splitext(filename)[1][0:].strip().lower()
-    hashed_filename = str(hash) + '_' + style + ext
+def get_hashed_filename(file, ext, extra):
+    hash = imagehash.average_hash(file)
+    hashed_filename = str(hash) + '_' + extra + ext
     return hashed_filename
 
 
@@ -104,15 +118,6 @@ def file_check(img):
         return True
     else:
         return False
-
-
-def zip_images(image_names):
-    zipf = zipfile.ZipFile(ZIP_PATH,'w', zipfile.ZIP_DEFLATED)
-
-    for img_name in image_names:
-        filepath = join(RESULTS_DIR, img_name)
-        zipf.write(filepath)
-    zipf.close()
 
 
 # Style transfer
