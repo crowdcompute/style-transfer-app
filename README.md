@@ -32,9 +32,10 @@ Call `localhost:3000/style_transfer` to upload images.
 
 Parameters:
 
-**images** : The images you want to edit
+**images** : The images you want to edit.
 
-**styles** : The styles you want to edit them with
+**styles** : The styles you want to edit the images.
+
 
 Comma separate the styles you want to use.
 
